@@ -1,5 +1,5 @@
 # pubsub-queue
-An interface for a pubsub provider and an in memory implementation
+An interface for a pubsub provider and an in memory implementation in Clojure.
 
 The work is *in progress*. But the basic structure of my code has been properly laid out. The code is complete with unit test cases that run without failure.
 
