@@ -1,21 +1,6 @@
 (ns san.pubsub 
-   "The library to support pubsub mechanism")
-
-(defprotocol pubsub-protocol
-   "Defines API contracts for pubsub support"
-   (start-topic [this topic-name] [this topic-name is-closed] 
-                "Registers a new message topic")
-   (list-topics [this] "Returns a list of all topic names registered")
-   (publish-to [this topic-name topic-messg] "Publishes a new message for the topic")
-   (build-topic-messg [this topic-name publisher message] "Creates a topic message to publish")
-   (addto-pubsub-register [this default-callback topic-list]
-                          [this default-callback pub-topics sub-topics]
-                          "Registers a pubsub participant and returns a participant id")
-   (subscribe-to [this topic-name participant]
-                 [this topic-name participant listner-callback]
-                 "Registers a participant as a listner to topic messages")
-   (register-publisher [this topic-name participant] 
-                       "Registers the participant as a publisher for this topic"))
+   "The library to support pubsub mechanism"
+   (:use san.pubsub-api :reload))
 
 (def ^{:private true :dynamic true} pubsub-mem nil)
 
@@ -68,16 +53,17 @@
         ;; TODO - check topic-name does not contain space, /, etc.
         (swap! topic-queues build-add-q topic-name is-closed))
      
-     (defn- build-pubsub
-        "Builds the implementation of pubsub-protocol"
-        []
-        (reify pubsub-protocol
+     (defmethod build-pubsub :in-memory
+        [provider-type]
+        (reify pubsub-provider
               (start-topic 
                  [this topic-name] 
-                 (_start-topic topic-name true))
+                 (_start-topic topic-name true)
+                 this)
               (start-topic 
                  [this topic-name is-closed] 
-                 (_start-topic topic-name is-closed))
+                 (_start-topic topic-name is-closed)
+                 this)
               (list-topics
                  [this]
                  (->> 
@@ -86,19 +72,27 @@
                                  (apply str rest-chars)))
                  ))
               (publish-to 
-                 [this topic-name topic-messg])
-              (build-topic-messg 
                  [this topic-name publisher message])
+              (read-message 
+                 [this topic-name message-id])
+              (read-all-from 
+                 [this topic-name message-id])
               (addto-pubsub-register 
                  [this default-callback topic-list])
               (addto-pubsub-register 
                  [this default-callback pub-topics sub-topics])
+              (removefrom-pubsub-register 
+                 [this participant])
               (subscribe-to 
                  [this topic-name participant])
               (subscribe-to 
                  [this topic-name participant listner-callback])
+              (unsubscribe-from 
+                 [this topic-name participant])
               (register-publisher 
                  [this topic-name participant])
+              (remove-publisher 
+                 [this topic-name participant]) 
         ))
 
      (defn pubsub
@@ -106,7 +100,7 @@
         []
         (if (nil? pubsub-mem)
             (alter-var-root #'pubsub-mem 
-                            (constantly (build-pubsub)))
+                            (constantly (build-pubsub :in-memory)))
         )
         pubsub-mem)
 )

@@ -1,6 +1,7 @@
 (ns san.test-pubsub
    (:use clojure.test)
-   (:use san.pubsub :reload))
+   (:use san.pubsub-api
+         san.pubsub :reload-all))
 
 (deftest test-pubsub-singleton
    (testing "pubsub provider is not nil"
@@ -10,10 +11,10 @@
            not
            is)
    )
-   (testing "pubsub provider type is pubsub-protocol"
+   (testing "pubsub provider type is pubsub-provider"
       (->>
            (pubsub)
-           (satisfies? pubsub-protocol)
+           (satisfies? pubsub-provider)
            is)
    ))
 
@@ -87,5 +88,17 @@
       ))
    )
 
+(deftest test-pubsub-provider
+   (testing "Start two topics and check their existence"
+      (->> 
+           (-> 
+               (build-pubsub :in-memory)
+               (start-topic "topic_1")
+               (start-topic "topic_2")
+               (list-topics)
+           )
+           (every? #(or (= % "topic_1") (= % "topic_2")))
+           is)
+   ))
 
 (run-tests 'san.test-pubsub)
